@@ -82,11 +82,11 @@ trait JsonRespondController
      * @param string $message
      * @return JsonResponse
      */
-    public function respondUnauthorized($message = null)
+    public function respondUnauthorized($message = null, $headers = [])
     {
         return $this->setHTTPStatusCode(401)
                     ->setErrorCode(42)
-                    ->respondWithError($message);
+                    ->respondWithError($message, $headers);
     }
 
     /**
@@ -161,14 +161,14 @@ trait JsonRespondController
      * @param string message
      * @return JsonResponse
      */
-    public function respondWithError($message = null)
+    public function respondWithError($message = null, $headers = [])
     {
         return $this->respond([
             'error' => [
                 'message' => $message ?? config('api.error_codes.'.$this->getErrorCode()),
                 'error_code' => $this->getErrorCode(),
             ],
-        ]);
+        ], $headers);
     }
 
     /**

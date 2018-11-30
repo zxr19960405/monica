@@ -6,9 +6,11 @@ use GuzzleHttp\Client;
 use App\Models\User\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 use App\Traits\JsonRespondController;
 use Barryvdh\Debugbar\Facade as Debugbar;
 use Illuminate\Support\Facades\Validator;
+use PragmaRX\Google2FALaravel\Support\Authenticator;
 
 class OAuthController extends Controller
 {
@@ -36,6 +38,7 @@ class OAuthController extends Controller
             $token = $this->proxy([
                 'username' => $request->get('email'),
                 'password' => $request->get('password'),
+                'one_time_password' => $request->get('one_time_password'),
                 'grantType' => 'password',
             ]);
 
@@ -64,10 +67,23 @@ class OAuthController extends Controller
 
         // Check if email exists. If not respond with an Unauthorized, this way a hacker
         // doesn't know if the login email exist or not, or if the password os wrong
-        $count = User::where('email', $request->get('email'))
-                    ->count();
+        $count = User::where('email', $request->get('email'))->count();
         if ($count === 0) {
             return $this->respondUnauthorized();
+        }
+
+        if (Auth::attempt(['email' => $request->get('email'), 'password' => $request->get('password')])) {
+            $user = Auth::user();
+            if (! empty($user->google2fa_secret)) {
+
+                $authenticator = app(Authenticator::class)->boot($request);
+
+                if (! $request->get('one_time_password') || ! $authenticator->verifyGoogle2FA($user->google2fa_secret, $request->get('one_time_password'))) {
+                    return $this->respondUnauthorized(null, [
+                        'www-authenticate' => 'needs-totp'
+                    ]);
+                }
+            }
         }
 
         return true;
