@@ -75,12 +75,11 @@ class OAuthController extends Controller
         if (Auth::attempt(['email' => $request->get('email'), 'password' => $request->get('password')])) {
             $user = Auth::user();
             if (! empty($user->google2fa_secret)) {
-
                 $authenticator = app(Authenticator::class)->boot($request);
 
                 if (! $request->get('one_time_password') || ! $authenticator->verifyGoogle2FA($user->google2fa_secret, $request->get('one_time_password'))) {
                     return $this->respondUnauthorized(null, [
-                        'www-authenticate' => 'needs-totp'
+                        'www-authenticate' => 'needs-totp',
                     ]);
                 }
             }
